@@ -231,9 +231,9 @@ function createStream(req) {
 
     // pipe
     // now read data then generate md5 hash
-    if (options.acceptRanges) {
+    if (req.headers.range) {
       const hash = md5(await stream2Buffer(fs.createReadStream(path, options)))
-      req.headers["CHECK_SUM"] = hash
+      res.setHeader('Check_Sum', hash)
     }
 
     var stream = fs.createReadStream(path, options)
