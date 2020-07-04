@@ -22,6 +22,7 @@ var url = require('url')
 var onFinished = require('on-finished')
 var destroy = require('destroy')
 var md5 = require('md5');
+var fs = require('fs');
 
 /**
  * Module exports.
@@ -232,7 +233,8 @@ function createStream(req) {
     // pipe
     // now read data then generate md5 hash
     if (req.headers.range) {
-      const hash = md5(await stream2Buffer(fs.createReadStream(path, options)))
+      const buffer = await stream2Buffer(fs.createReadStream(path, options))
+      const hash = md5(buffer)
       res.setHeader('Check_Sum', hash)
     }
 
