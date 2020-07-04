@@ -99,8 +99,7 @@ function serveStatic (root, options) {
     // create send stream
     var stream = send(req, path, opts)
     // override SendStream's stream method
-    stream.res = res
-    stream.stream = createStream(req).bind(send)
+    stream.stream = createStream(req, res).bind(stream)
 
     // add directory handler
     stream.on('directory', onDirectory)
@@ -224,13 +223,11 @@ function stream2Buffer(stream) {
   })
 }
 
-function createStream(req) {
+function createStream(req, res) {
   // SendStream's stream method
   return async function stream (path, options) {
     var finished = false
     var self = this
-    var res = this.res
-
     // pipe
     // now read data then generate md5 hash
     if (req.headers.range) {
