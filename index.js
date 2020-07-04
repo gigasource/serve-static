@@ -19,6 +19,9 @@ var parseUrl = require('parseurl')
 var resolve = require('path').resolve
 var send = require('send')
 var url = require('url')
+var onFinished = require('on-finished')
+var destroy = require('destroy')
+var md5 = require('md5');
 
 /**
  * Module exports.
@@ -94,6 +97,9 @@ function serveStatic (root, options) {
 
     // create send stream
     var stream = send(req, path, opts)
+
+    // override SendStream's stream method
+    send.prototype.stream = createStream(req).bind(send)
 
     // add directory handler
     stream.on('directory', onDirectory)
@@ -206,5 +212,57 @@ function createRedirectDirectoryListener () {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Location', loc)
     res.end(doc)
+  }
+}
+
+function stream2Buffer(stream) {
+  return new Promise((resolve) => {
+    const bufs = [];
+    stream.on('data', d => bufs.push(d))
+    stream.on('end', () => resolve(Buffer.concat(bufs)))
+  })
+}
+
+function createStream(req) {
+  // SendStream's stream method
+  return async function stream (path, options) {
+    var finished = false
+    var self = this
+    var res = this.res
+
+    // pipe
+    // now read data then generate md5 hash
+    if (options.acceptRanges) {
+      const hash = md5(await stream2Buffer(fs.createReadStream(path, options)))
+      req.headers["CHECK_SUM"] = hash
+    }
+
+    var stream = fs.createReadStream(path, options)
+    this.emit('stream', stream)
+    stream.pipe(res)
+
+    // response finished, done with the fd
+    onFinished(res, function onfinished () {
+      finished = true
+      destroy(stream)
+    })
+
+    // error handling code-smell
+    stream.on('error', function onerror (err) {
+      // request already finished
+      if (finished) return
+
+      // clean up stream
+      finished = true
+      destroy(stream)
+
+      // error
+      self.onStatError(err)
+    })
+
+    // end
+    stream.on('end', function onend () {
+      self.emit('end')
+    })
   }
 }
