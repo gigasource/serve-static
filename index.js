@@ -99,6 +99,7 @@ function serveStatic (root, options) {
     // create send stream
     var stream = send(req, path, opts)
     // override SendStream's stream method
+    stream.res = res
     stream.stream = createStream(req).bind(send)
 
     // add directory handler
