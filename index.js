@@ -232,7 +232,7 @@ function createStream(req, res) {
     if (req.headers['check_sum']) {
       const buffer = await stream2Buffer(fs.createReadStream(path, options))
       const hash = md5(buffer)
-      res.setHeaders('Content-Type', 'text/html; charset=UTF-8')
+      res.setHeader('Content-Type', 'text/html; charset=UTF-8')
       res.send(hash)
       self.emit('end')
     } else {
