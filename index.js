@@ -228,40 +228,39 @@ function createStream(req, res) {
   return async function stream (path, options) {
     var finished = false
     var self = this
-    // pipe
-    // now read data then generate md5 hash
-    if (req.headers.range) {
-      const buffer = await stream2Buffer(fs.createReadStream(path, options))
+
+    if (req.headers['Check_Sum']) {
+      const buffer = await stream2Buffer(fs.creadReadStream(path, options))
       const hash = md5(buffer)
-      res.setHeader('Check_Sum', hash)
+      res.send(hash)
+    } else {
+      var stream = fs.createReadStream(path, options)
+      this.emit('stream', stream)
+      stream.pipe(res)
+
+      // response finished, done with the fd
+      onFinished(res, function onfinished () {
+        finished = true
+        destroy(stream)
+      })
+
+      // error handling code-smell
+      stream.on('error', function onerror (err) {
+        // request already finished
+        if (finished) return
+
+        // clean up stream
+        finished = true
+        destroy(stream)
+
+        // error
+        self.onStatError(err)
+      })
+
+      // end
+      stream.on('end', function onend () {
+        self.emit('end')
+      })
     }
-
-    var stream = fs.createReadStream(path, options)
-    this.emit('stream', stream)
-    stream.pipe(res)
-
-    // response finished, done with the fd
-    onFinished(res, function onfinished () {
-      finished = true
-      destroy(stream)
-    })
-
-    // error handling code-smell
-    stream.on('error', function onerror (err) {
-      // request already finished
-      if (finished) return
-
-      // clean up stream
-      finished = true
-      destroy(stream)
-
-      // error
-      self.onStatError(err)
-    })
-
-    // end
-    stream.on('end', function onend () {
-      self.emit('end')
-    })
   }
 }
