@@ -230,9 +230,10 @@ function createStream(req, res) {
     var self = this
 
     if (req.headers['check_sum']) {
-      const buffer = await stream2Buffer(fs.creadReadStream(path, options))
+      const buffer = await stream2Buffer(fs.createReadStream(path, options))
       const hash = md5(buffer)
       res.send(hash)
+      self.emit('end')
     } else {
       var stream = fs.createReadStream(path, options)
       this.emit('stream', stream)
