@@ -223,6 +223,7 @@ function getMd5(stream) {
       StreamMD5.update(state, enc)
       callback()
     }))
+    .on('finish', () => resolve(StreamMD5.finalize(state)))
     .on('end', () => resolve(StreamMD5.finalize(state)))
     .on('error', (e) => reject(e))
   })
