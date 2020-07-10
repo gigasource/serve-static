@@ -21,8 +21,9 @@ var send = require('send')
 var url = require('url')
 var onFinished = require('on-finished')
 var destroy = require('destroy')
-var md5 = require('md5');
 var fs = require('fs');
+var StreamMD5 = require('stream-md5/md5')
+var through2 = require('through2')
 
 /**
  * Module exports.
@@ -215,11 +216,15 @@ function createRedirectDirectoryListener () {
   }
 }
 
-function stream2Buffer(stream) {
-  return new Promise((resolve) => {
-    const bufs = [];
-    stream.on('data', d => bufs.push(d))
-    stream.on('end', () => resolve(Buffer.concat(bufs)))
+function getMd5(stream) {
+  return new Promise((resolve, reject) => {
+    var state = StreamMD5.init()
+    stream.pipe(through2((chunk, enc, callback) => {
+      StreamMD5.update(this.state, enc)
+      callback()
+    }))
+    .on('end', () => resolve(StreamMD5.finalize(state)))
+    .on('error', (e) => reject(e))
   })
 }
 
@@ -230,8 +235,7 @@ function createStream(req, res) {
     var self = this
 
     if (req.headers['check_sum']) {
-      const buffer = await stream2Buffer(fs.createReadStream(path, options))
-      const hash = md5(buffer)
+      const hash = await getMd5(fs.createReadStream(path, options))
       res.setHeader('Content-Type', 'text/html; charset=UTF-8')
       res.send(hash)
       self.emit('end')
