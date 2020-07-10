@@ -220,11 +220,10 @@ function getMd5(stream) {
   return new Promise((resolve, reject) => {
     var state = StreamMD5.init()
     stream.pipe(through2((chunk, enc, callback) => {
-      StreamMD5.update(state, enc)
+      StreamMD5.update(state, chunk)
       callback()
     }))
     .on('finish', () => resolve(StreamMD5.finalize(state)))
-    .on('end', () => resolve(StreamMD5.finalize(state)))
     .on('error', (e) => reject(e))
   })
 }
